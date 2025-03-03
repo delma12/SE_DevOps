@@ -11,18 +11,18 @@ from typing import List
 from fastapi.staticfiles import StaticFiles
 
 
+
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
-# Initialize database
 init_db()
 
-# Password context for hashing passwords
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# CORS middleware configuration
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -32,7 +32,6 @@ app.add_middleware(
 )
 
 
-# Dependency to get database session
 def get_db():
     db = SessionLocal()
     try:
@@ -41,16 +40,15 @@ def get_db():
         db.close()
 
 
-# Admin user creation
 def create_admin_user(db: Session):
     if not db.query(User).filter(User.username == "admin").first():
         hashed_password = pwd_context.hash("adminpassword")
-        admin_user = User(username="admin", hashed_password=hashed_password, is_admin=True)
+        admin_user = User(username="admin",
+                          hashed_password=hashed_password, is_admin=True)
         db.add(admin_user)
         db.commit()
 
 
-# On startup, create the admin user if not exists
 @app.on_event("startup")
 async def startup_event():
     db = SessionLocal()
@@ -60,7 +58,6 @@ async def startup_event():
         db.close()
 
 
-# Current user authentication based on cookie
 def get_current_user(username: str = Cookie(None), db: Session = Depends(get_db)):
     if not username:
         raise HTTPException(status_code=403, detail="User not authenticated")
@@ -70,13 +67,11 @@ def get_current_user(username: str = Cookie(None), db: Session = Depends(get_db)
     return user
 
 
-# Check if user is admin
 def is_admin(user: User):
     if not user.is_admin:
         raise HTTPException(status_code=403, detail="Unauthorised")
 
 
-# User create and update schemas
 class UserCreate(BaseModel):
     username: str
     password: str
@@ -98,7 +93,6 @@ class UserResponse(BaseModel):
         orm_mode = True
 
 
-# Apprentice create and update schemas
 class ApprenticeCreate(BaseModel):
     name: str
     email: str
@@ -136,7 +130,6 @@ async def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 
-# Login route
 @app.post('/login', response_class=RedirectResponse)
 async def login_post(request: Request, db: Session = Depends(get_db)):
     form = await request.form()
@@ -150,28 +143,20 @@ async def login_post(request: Request, db: Session = Depends(get_db)):
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
 
-
-
 @app.post('/register')
 async def register_post(request: Request, db: Session = Depends(get_db)):
     form = await request.form()
     username = form.get("username")
     password = form.get("password")
-
-    # Check if the username already exists
     if db.query(User).filter(User.username == username).first():
         raise HTTPException(status_code=400, detail="Username already taken")
-
-    # Hash the password and store the user
     hashed_password = pwd_context.hash(password)
     new_user = User(username=username, hashed_password=hashed_password)
     db.add(new_user)
     db.commit()
-
     return templates.TemplateResponse("index.html", {"request": request, "message": "Registration successful! You can now log in."})
-    
 
-# Dashboard route
+
 @app.get('/dashboard')
 async def dashboard(request: Request, user: UserResponse = Depends(get_current_user)):
     title = f"Welcome, {'Admin' if user.is_admin else user.username}'s Dashboard"
@@ -181,8 +166,6 @@ async def dashboard(request: Request, user: UserResponse = Depends(get_current_u
         "is_admin": user.is_admin
     })
 
-
-# Users routes (CRUD for users)
 @app.get('/users', response_model=List[UserResponse])
 async def get_users(request: Request, db: Session = Depends(get_db), user: UserResponse = Depends(get_current_user)):
     is_admin(user)
@@ -194,7 +177,8 @@ async def get_users(request: Request, db: Session = Depends(get_db), user: UserR
 async def create_user(user_data: UserCreate, db: Session = Depends(get_db), current_user: UserResponse = Depends(get_current_user)):
     is_admin(current_user)
     hashed_password = pwd_context.hash(user_data.password)
-    new_user = User(username=user_data.username, hashed_password=hashed_password, is_admin=user_data.is_admin)
+    new_user = User(username=user_data.username,
+                    hashed_password=hashed_password, is_admin=user_data.is_admin)
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
@@ -216,6 +200,16 @@ async def update_user(user_id: int, user_data: UserUpdate, db: Session = Depends
     return db_user
 
 
+@app.get("/users/{user_id}", response_model=UserResponse)
+async def get_user(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if user:
+        return user
+    else:
+        raise HTTPException(status_code=404, detail="User not found")
+
+
 @app.delete('/users/{user_id}', response_model=UserResponse)
 async def delete_user(user_id: int, db: Session = Depends(get_db), current_user: UserResponse = Depends(get_current_user)):
     is_admin(current_user)
@@ -227,7 +221,6 @@ async def delete_user(user_id: int, db: Session = Depends(get_db), current_user:
     return db_user
 
 
-# Apprentice routes (CRUD for apprentices)
 @app.get('/apprentices')
 async def apprentices(request: Request, db: Session = Depends(get_db), user: UserResponse = Depends(get_current_user)):
     apprentices = db.query(Apprentice).all()
@@ -269,21 +262,126 @@ async def create_apprentice(apprentice_data: ApprenticeCreate, db: Session = Dep
     )
 
 
-# Logout route
+@app.get('/apprentices/{apprentice_id}', response_model=ApprenticeResponse)
+async def get_apprentice(apprentice_id: int, db: Session = Depends(get_db), user: UserResponse = Depends(get_current_user)):
+    apprentice = db.query(Apprentice).filter(Apprentice.id == apprentice_id).first()
+    if not apprentice:
+        raise HTTPException(status_code=404, detail="Apprentice not found")
+
+    
+    creator_username = db.query(User.username).filter(User.id == apprentice.creator_id).scalar() or "Deleted User"
+
+    return ApprenticeResponse(
+        id=apprentice.id,
+        name=apprentice.name,
+        email=apprentice.email,
+        age=apprentice.age,
+        cohort_year=apprentice.cohort_year,
+        job_role=apprentice.job_role,
+        skills=apprentice.skills,
+        creator_username=creator_username
+    )
+
+
+
+@app.put('/apprentices/{apprentice_id}', response_model=ApprenticeResponse)
+async def update_apprentice(
+    apprentice_id: int,
+    apprentice_data: ApprenticeUpdate,
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user)
+):
+    
+    db_apprentice = db.query(Apprentice).filter(Apprentice.id == apprentice_id).first()
+
+    if not db_apprentice:
+        raise HTTPException(status_code=404, detail="Apprentice not found")
+
+    
+    if is_admin(current_user):
+        
+        pass
+    elif db_apprentice.creator_id != current_user.id:
+        
+        raise HTTPException(status_code=403, detail="Not authorised to edit this apprentice")
+
+
+    db_apprentice.name = apprentice_data.name
+    db_apprentice.email = apprentice_data.email
+    db_apprentice.age = apprentice_data.age
+    db_apprentice.cohort_year = apprentice_data.cohort_year
+    db_apprentice.job_role = apprentice_data.job_role
+    db_apprentice.skills = apprentice_data.skills
+
+    db.commit()
+    db.refresh(db_apprentice)
+
+    creator = db.query(User).filter(User.id == db_apprentice.creator_id).first()
+    creator_username = creator.username if creator else "Deleted User"
+
+    return ApprenticeResponse(
+        id=db_apprentice.id,
+        name=db_apprentice.name,
+        email=db_apprentice.email,
+        age=db_apprentice.age,
+        cohort_year=db_apprentice.cohort_year,
+        job_role=db_apprentice.job_role,
+        skills=db_apprentice.skills,
+        creator_username=creator_username
+    )
+
+
+
+
+@app.delete('/apprentices/{apprentice_id}', response_model=ApprenticeResponse)
+async def delete_apprentice(apprentice_id: int, db: Session = Depends(get_db), user: UserResponse = Depends(get_current_user)):
+    is_admin(user)
+
+   
+    db_apprentice = db.query(Apprentice).filter(
+        Apprentice.id == apprentice_id).first()
+    if not db_apprentice:
+        raise HTTPException(status_code=404, detail="Apprentice not found")
+
+   
+    creator = db.query(User).filter(
+        User.id == db_apprentice.creator_id).first()
+
+   
+    creator_username = creator.username if creator else "Deleted User"
+
+    
+    response = ApprenticeResponse(
+        id=db_apprentice.id,
+        name=db_apprentice.name,
+        email=db_apprentice.email,
+        age=db_apprentice.age,
+        cohort_year=db_apprentice.cohort_year,
+        job_role=db_apprentice.job_role,
+        skills=db_apprentice.skills,
+        creator_username=creator_username  
+    )
+
+    
+    db.delete(db_apprentice)
+    db.commit()
+
+    return response
+
+
 @app.get('/logout')
 async def logout(response: RedirectResponse):
     response.delete_cookie(key="username")
     return RedirectResponse(url='/')
 
 
-# Health check endpoint (HEAD request)
+if __name__ == "__main__":
+    import uvicorn
+    import os
+
+    port = int(os.getenv("PORT", 8000))  
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
+
 @app.head("/")
 async def head_index():
     return Response(status_code=200)
-
-
-# Start the app locally
-if __name__ == "__main__":
-    import uvicorn
-    # Running the app on localhost:8000 for local testing
-    uvicorn.run(app, host="127.0.0.1", port=8000)
