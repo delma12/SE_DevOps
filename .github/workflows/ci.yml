@@ -25,10 +25,17 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run Security Scan (Bandit)
-        run: pip install bandit && bandit -r .
+        run: pip install bandit &&  bandit -r . --severity-level high
 
       - name: Run Linting (Flake8)
         run: pip install flake8 && flake8 --max-line-length=100
+
+      - name: Run OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: "Apprentice Management System"
+          path: "."
+          format: "HTML"
 
       - name: Run Import Sorting (isort)
         run: pip install isort && isort --check-only .
