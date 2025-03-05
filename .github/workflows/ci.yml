@@ -23,13 +23,25 @@ jobs:
   
       - name: Install dependencies
         run: pip install -r requirements.txt
-  
-      - name: Run Security Scan (Bandit)
-        run: pip install bandit &&  bandit -r . --severity-level high
+
+  linting:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      
+      - name: Format Code (Black)
+        run: pip install black && black --check .
 
       - name: Run Linting (Flake8)
         run: pip install flake8 && flake8 --max-line-length=100 --exclude .venv,venv
 
+      - name: Run Import Sorting (isort)
+        run: pip install isort && isort --check-only .
+
+  Security_scan:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
       - name: Run OWASP Dependency Check
         uses: dependency-check/Dependency-Check_Action@main
         with:
@@ -37,14 +49,22 @@ jobs:
           path: "."
           format: "HTML"
 
-      - name: Run Import Sorting (isort)
-        run: pip install isort && isort --check-only .
+      - name: Run Security Scan (Bandit)
+        run: pip install bandit &&  bandit -r . --severity-level high
     
       - name: Check Dependency Security (Safety)
         run: pip install safety && safety check
-      
+        
+  SAST_analysis:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:    
       - name: Run SAST Analysis (Semgrep)
         run: pip install semgrep && semgrep scan --config=python
 
+  tests:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
       - name: Run Unit Tests
         run: pytest
