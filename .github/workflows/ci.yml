@@ -9,7 +9,7 @@ on:
       - 'main'
 
 jobs:
-  tests:
+  setup:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -20,15 +20,15 @@ jobs:
         with:
           python-version: '3.9'
           cache: pip
-
+  
       - name: Install dependencies
         run: pip install -r requirements.txt
-
+  
       - name: Run Security Scan (Bandit)
         run: pip install bandit &&  bandit -r . --severity-level high
 
       - name: Run Linting (Flake8)
-        run: pip install flake8 && flake8 --max-line-length=100
+        run: pip install flake8 && flake8 --max-line-length=100 --exclude .venv,venv
 
       - name: Run OWASP Dependency Check
         uses: dependency-check/Dependency-Check_Action@main
