@@ -66,3 +66,4 @@ Typing:
 StaticFiles:
 
 1. StaticFiles - Utility for serving static files like HTML, CSS, images, or JavaScript.
+

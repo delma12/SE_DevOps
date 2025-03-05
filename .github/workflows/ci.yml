@@ -1,24 +1,43 @@
-name: run main.py
+name: Run main.py
+
 on:
   push:
-    branch:
-       - 'main'
+    branches:
+      - 'main'
   pull_request:
-     branches:
-       - 'main'
-jobs:
+    branches:
+      - 'main'
 
-   tests:
-      runs-on: ubuntu-latest
-      steps:
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-         python-version: '3.9'
-         cache: pip
-      - name: Install python packages
+          python-version: '3.9'
+          cache: pip
+
+      - name: Install dependencies
         run: pip install -r requirements.txt
-      - name: Run tests
+
+      - name: Run Security Scan (Bandit)
+        run: pip install bandit && bandit -r .
+
+      - name: Run Linting (Flake8)
+        run: pip install flake8 && flake8 --max-line-length=100
+
+      - name: Run Import Sorting (isort)
+        run: pip install isort && isort --check-only .
+    
+      - name: Check Dependency Security (Safety)
+        run: pip install safety && safety check
+      
+      - name: Run SAST Analysis (Semgrep)
+        run: pip install semgrep && semgrep scan --config=python
+
+      - name: Run Unit Tests
         run: pytest
