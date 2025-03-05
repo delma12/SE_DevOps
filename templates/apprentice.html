@@ -8,6 +8,7 @@
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
         rel="stylesheet"
     />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
     <style>
         .notification-banner {
@@ -28,13 +29,93 @@
             background-color: #f8d7da;
             color: #721c24;
         }
+        .input-group {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .input-group-text {
+            background-color: #fff;
+            border-left: none;
+        }
+        #searchInput:focus {
+            border-right: none;
+            box-shadow: none;
+        }
+        .table {
+            margin-top: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .table thead th {
+            background-color: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+        }
+        /* New Styles */
+        .input-group-lg {
+            margin-top: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .input-group-lg .form-control {
+            border-radius: 25px 0 0 25px;
+            font-size: 1.1rem;
+            padding: 0.75rem 1.5rem;
+        }
+
+        .input-group-lg .input-group-text {
+            border-radius: 0 25px 25px 0;
+            background-color: #f8f9fa;
+            padding: 0.75rem 1.5rem;
+        }
+
+        .bi-search {
+            font-size: 1.2rem;
+            color: #6c757d;
+        }
+
+        /* Remove the old buttons from the bottom */
+        .container > .btn,
+        .container > a.btn {
+            display: none;
+        }
     </style>
 </head>
 <body>
 <div class="notification-banner" id="notificationBanner"></div>
 
+
 <div class="container mt-5">
-    <h1 class="text-center">Apprentices</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Apprentices</h1>
+        <div>
+            <button
+                class="btn btn-primary me-2"
+                data-bs-toggle="modal"
+                data-bs-target="#addApprenticeModal"
+            >
+                Add Apprentice
+            </button>
+            <a href="/dashboard" class="btn btn-secondary">Back to Dashboard</a>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-8 mx-auto">
+            <div class="input-group input-group-lg">
+                <input 
+                    type="text" 
+                    class="form-control form-control-lg shadow-sm"
+                    id="searchInput" 
+                    placeholder="Search apprentices by name, email, job role or skills..."
+                >
+                <span class="input-group-text">
+                    <i class="bi bi-search"></i>
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Apprentices Table -->
+<div class="container">
     <table class="table">
         <thead>
         <tr>
@@ -82,17 +163,9 @@
         {% endfor %}
         </tbody>
     </table>
-
-    <button
-        class="btn btn-primary"
-        data-bs-toggle="modal"
-        data-bs-target="#addApprenticeModal"
-    >
-        Add Apprentice
-    </button>
-    <a href="/dashboard" class="btn btn-secondary">Back to Dashboard</a>
 </div>
 
+<!-- Add Apprentice Modal -->
 <div
     class="modal fade"
     id="addApprenticeModal"
@@ -199,9 +272,24 @@
         }, 5000);
     }
 
- 
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    let tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    let tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    currentApprenticeId = null;
+
+    function showNotification(message, isSuccess) {
+        const banner = document.getElementById("notificationBanner");
+        banner.textContent = message;
+        banner.className = `notification-banner ${isSuccess ? "success" : "error"}`;
+        banner.style.display = "block";
+        setTimeout(() => {
+            banner.style.display = "none";
+        }, 5000);
+    }
+
+    tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 
@@ -210,10 +298,8 @@
         .addEventListener("submit", async function (event) {
             event.preventDefault();
 
-            
             tooltipList.forEach((tooltip) => tooltip.hide());
 
-          
             if (!validateForm()) {
                 return;
             }
@@ -222,7 +308,6 @@
                 return;
             }
 
-            
             const apprenticeData = {
                 name: document.getElementById("name").value,
                 email: document.getElementById("email").value,
@@ -276,7 +361,6 @@
 
         let isValid = true;
 
-        
         const nameRegex = /^[A-Za-z\s]+$/;
         if (!nameRegex.test(name)) {
             setError("name", "Name must contain only alphabetic characters and spaces.");
@@ -285,7 +369,6 @@
             clearError("name");
         }
 
-        // Validate age
         if (age < 1 || age > 100) {
             setError("age", "Age must be between 1 and 100");
             isValid = false;
@@ -293,7 +376,6 @@
             clearError("age");
         }
 
-        
         const currentYear = new Date().getFullYear();
         if (cohortYear > currentYear) {
             setError("cohort_year", "Cohort year cannot be greater than current year");
@@ -302,7 +384,6 @@
             clearError("cohort_year");
         }
 
-        
         const jobRoleRegex = /^[A-Za-z\s]+$/;
         if (!jobRoleRegex.test(jobRole)) {
             setError("job_role", "Job role must contain only alphabetic characters and spaces");
@@ -311,7 +392,6 @@
             clearError("job_role");
         }
 
-        
         const skillsRegex = /^[A-Za-z\s,]*$/;
         if (!skillsRegex.test(skills)) {
             setError("skills", "Skills must contain only alphabetic characters, spaces, and commas");
@@ -368,7 +448,6 @@
     document
         .querySelector("[data-bs-target='#addApprenticeModal']")
         .addEventListener("click", function () {
-            
             document.getElementById("name").value = "";
             document.getElementById("email").value = "";
             document.getElementById("age").value = "";
@@ -404,6 +483,29 @@
                 console.error("Error:", error);
             });
     }
+
+    // Search functionality
+    document.getElementById('searchInput').addEventListener('keyup', function() {
+        const searchValue = this.value.toLowerCase();
+        const tableBody = document.getElementById('apprentice-table-body');
+        const rows = tableBody.getElementsByTagName('tr');
+
+        for (let row of rows) {
+            const name = row.cells[1].textContent.toLowerCase();
+            const email = row.cells[2].textContent.toLowerCase();
+            const jobRole = row.cells[5].textContent.toLowerCase();
+            const skills = row.cells[6].textContent.toLowerCase();
+
+            if (name.includes(searchValue) || 
+                email.includes(searchValue) || 
+                jobRole.includes(searchValue) || 
+                skills.includes(searchValue)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        }
+    });
 </script>
 </body>
 </html>

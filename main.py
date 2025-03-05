@@ -1,14 +1,17 @@
-from fastapi import FastAPI, Request, Depends, HTTPException, Cookie, Response
+from fastapi import FastAPI, Request, Depends, HTTPException, Cookie, Response, Form, File, UploadFile
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from database import SessionLocal, init_db
-from models import User, Apprentice
+from models import User, Apprentice, Review
 from fastapi.middleware.cors import CORSMiddleware
 from passlib.context import CryptContext
 from fastapi.responses import RedirectResponse
-from typing import List
+from typing import List, Optional
 from fastapi.staticfiles import StaticFiles
+from datetime import datetime, date, timedelta
+import shutil
+import os
 
 
 
@@ -123,6 +126,31 @@ class ApprenticeResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
+class ReviewCreate(BaseModel):
+    content: str
+    apprentice_id: int
+    date_of_review: date
+    completed: bool = False
+
+class ReviewUpdate(BaseModel):
+    content: str
+    apprentice_id: int
+    date_of_review: date
+    completed: bool = False
+
+
+class ReviewResponse(BaseModel):
+    id: int
+    content: str
+    apprentice_id: int
+    user_id: int
+    date_of_review: date
+    progress_review_form: Optional[str] = None  
+    completed: bool = False
+
+    class Config:
+         from_attributes = True
 
 
 @app.get('/')
@@ -367,6 +395,138 @@ async def delete_apprentice(apprentice_id: int, db: Session = Depends(get_db), u
     db.commit()
 
     return response
+
+
+@app.get('/reviews')
+async def reviews(request: Request, db: Session = Depends(get_db), user: UserResponse = Depends(get_current_user)):
+    reviews = db.query(Review).join(Review.apprentice).join(Review.user).all()
+    apprentices = db.query(Apprentice).all()
+    return templates.TemplateResponse("reviews.html", {
+        "request": request,
+        "reviews": reviews,
+        "apprentices": apprentices,
+        "is_admin": user.is_admin,
+        "current_user": user
+    })
+
+@app.post("/reviews", response_model=ReviewResponse)
+async def create_review(
+    apprentice_id: int = Form(...),
+    content: str = Form(...),
+    date_of_review: str = Form(...),
+    completed: bool = Form(False),
+    review_document: UploadFile = File(None),
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user)
+):
+    try:
+        document_path = None
+        if review_document:
+            upload_dir = "uploads/reviews"
+            os.makedirs(upload_dir, exist_ok=True)
+            filename = f"review_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{review_document.filename}"
+            document_path = os.path.join(upload_dir, filename)
+            
+            with open(document_path, "wb") as buffer:
+                shutil.copyfileobj(review_document.file, buffer)
+
+        new_review = Review(
+            content=content,
+            apprentice_id=apprentice_id,
+            user_id=current_user.id,
+            date_of_review=datetime.strptime(date_of_review, '%Y-%m-%d').date(),
+            progress_review_form=document_path,
+            completed=completed
+        )
+        
+        db.add(new_review)
+        db.commit()
+        db.refresh(new_review)
+        
+        return new_review
+        
+    except Exception as e:
+        if document_path and os.path.exists(document_path):
+            os.remove(document_path)
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get('/reviews/{review_id}', response_model=ReviewResponse)
+async def get_review(review_id: int, db: Session = Depends(get_db), user: UserResponse = Depends(get_current_user)):
+    review = db.query(Review).filter(Review.id == review_id).first()
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+    return review
+
+@app.put('/reviews/{review_id}', response_model=ReviewResponse)
+async def update_review(
+    review_id: int,
+    apprentice_id: int = Form(...),
+    content: str = Form(...),
+    date_of_review: str = Form(...),
+    completed: bool = Form(False),
+    review_document: UploadFile = File(None),
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user)
+):
+    # Get existing review
+    review = db.query(Review).filter(Review.id == review_id).first()
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+
+    # Check permissions
+    if not current_user.is_admin and review.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorised to edit this review")
+
+    try:
+        # Handle file upload if provided
+        if review_document:
+            # Delete old file if it exists
+            if review.progress_review_form:
+                try:
+                    os.remove(review.progress_review_form)
+                except OSError:
+                    pass  # File might not exist
+
+            # Save new file
+            upload_dir = "uploads/reviews"
+            os.makedirs(upload_dir, exist_ok=True)
+            filename = f"review_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{review_document.filename}"
+            document_path = os.path.join(upload_dir, filename)
+            
+            with open(document_path, "wb") as buffer:
+                shutil.copyfileobj(review_document.file, buffer)
+            
+            review.progress_review_form = document_path
+
+        # Update review fields
+        review.apprentice_id = apprentice_id
+        review.content = content
+        review.date_of_review = datetime.strptime(date_of_review, '%Y-%m-%d').date()
+        review.completed = completed
+
+        db.commit()
+        db.refresh(review)
+        return review
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.delete('/reviews/{review_id}')
+async def delete_review(review_id: int, db: Session = Depends(get_db), user: UserResponse = Depends(get_current_user)):
+    if not user.is_admin:
+        raise HTTPException(status_code=403, detail="Only administrators can delete reviews")
+
+    review = db.query(Review).filter(Review.id == review_id).first()
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+
+    db.delete(review)
+    db.commit()
+    return {"message": "Review deleted successfully"}
+
 
 
 @app.get('/logout')

@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, Date
 from database import Base
 from sqlalchemy.orm import relationship
+from datetime import timedelta, date
 
 
 class User(Base):
@@ -25,3 +26,25 @@ class Apprentice(Base):
     skills = Column(String)
     creator_id = Column(Integer, ForeignKey('users.id'))
     creator = relationship("User", back_populates="apprentices")
+    reviews = relationship("Review", back_populates="apprentice")
+
+    
+class Review(Base):
+    __tablename__ = 'reviews'
+
+    id = Column(Integer, primary_key=True, index=True)
+    content = Column(String)
+    apprentice_id = Column(Integer, ForeignKey('apprentices.id'))
+    user_id = Column(Integer, ForeignKey('users.id'))
+    date_of_review = Column(Date)
+    progress_review_form = Column(String, nullable=True)  
+    completed = Column(Boolean, default=False)
+
+    apprentice = relationship("Apprentice", back_populates="reviews")
+    user = relationship("User")
+
+    @property
+    def date_of_next_review(self):
+        if self.date_of_review:
+            return self.date_of_review + timedelta(weeks=10)
+        return None

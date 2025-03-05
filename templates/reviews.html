@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Progress Reviews</title>
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        .notification-banner {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 1rem;
+            text-align: center;
+            z-index: 1050;
+        }
+
+        .notification-banner.success {
+            background-color: #d4edda;
+            color: #155724;
+            border-bottom: 1px solid #c3e6cb;
+        }
+
+        .notification-banner.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-bottom: 1px solid #f5c6cb;
+        }
+
+        .input-group {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .input-group-text {
+            background-color: #fff;
+            border-left: none;
+        }
+
+        #searchInput:focus {
+            border-right: none;
+            box-shadow: none;
+        }
+
+        .table {
+            margin-top: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .table thead th {
+            background-color: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .review-card .card {
+            transition: transform 0.2s;
+        }
+
+        .review-card .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .review-card .card-header {
+            background-color: #f8f9fa;
+        }
+
+        .review-card .badge {
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="notification-banner" id="notificationBanner"></div>
+
+    <div class="container mt-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Progress Reviews</h1>
+            <div>
+                <a href="/dashboard" class="btn btn-secondary">Back to Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mt-4">
+        <!-- Search and Add Review Row -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="input-group">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search reviews...">
+                    <button class="btn btn-outline-secondary" type="button">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4 text-end">
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#reviewModal">
+                    <i class="bi bi-plus-circle"></i> Add Review
+                </button>
+            </div>
+        </div>
+
+        <!-- Reviews Grid -->
+        <div class="row" id="reviews-container">
+            {% for review in reviews %}
+            <div class="col-md-6 mb-4 review-card">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Review for {{ review.apprentice.name }}</h5>
+                        <span class="badge bg-primary">{{ review.date_of_review.strftime('%d-%m-%Y') }}</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <small class="text-muted">Author: {{ review.user.username }}</small>
+                        </div>
+                        <p class="card-text">{{ review.content }}</p>
+                        <div class="mt-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="text-muted">Next Review: </span>
+                                    <span class="badge bg-info">{{ review.date_of_next_review.strftime('%d-%m-%Y') }}</span>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" 
+                                        {% if review.completed %}checked{% endif %}
+                                        onchange="updateReviewStatus({{ review.id }}, this.checked)"
+                                        {% if current_user.id != review.user_id and not is_admin %}disabled{% endif %}>
+                                    <label class="form-check-label">Completed</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                {% if review.progress_review_form %}
+                                <a href="/download-review/{{ review.id }}" class="btn btn-sm btn-info">
+                                    <i class="bi bi-download"></i> Download Review
+                                </a>
+                                {% else %}
+                                <span class="text-muted">No document attached</span>
+                                {% endif %}
+                            </div>
+                            <div class="btn-group">
+                                {% if current_user.id == review.user_id or is_admin %}
+                                <button class="btn btn-warning btn-sm" onclick="editReview({{ review.id }})">
+                                    <i class="bi bi-pencil"></i> Edit
+                                </button>
+                                {% endif %}
+                                {% if is_admin %}
+                                <button class="btn btn-danger btn-sm" onclick="deleteReview({{ review.id }})">
+                                    <i class="bi bi-trash"></i> Delete
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Review Modal -->
+    <div class="modal fade" id="reviewModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Add Review</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="reviewForm">
+                        <input type="hidden" id="reviewId">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="apprentice" class="form-label">Apprentice</label>
+                                <select class="form-select" id="apprentice" required>
+                                    <option value="">Select apprentice...</option>
+                                    {% for apprentice in apprentices %}
+                                    <option value="{{ apprentice.id }}">{{ apprentice.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="date_of_review" class="form-label">Date of Review</label>
+                                <input type="date" class="form-control" id="date_of_review" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="content" class="form-label">Review Notes</label>
+                            <textarea class="form-control" id="content" rows="4" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="review_document" class="form-label">Upload Review Document</label>
+                            <input type="file" class="form-control" id="review_document" accept=".pdf,.doc,.docx">
+                            <small class="text-muted">Accepted formats: PDF, DOC, DOCX</small>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="completed">
+                                <label class="form-check-label" for="completed">Mark as Completed</label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="saveReview()">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let reviewModal;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            reviewModal = new bootstrap.Modal(document.getElementById('reviewModal'));
+        });
+
+        function editReview(id) {
+            fetch(`/reviews/${id}`)
+                .then(response => response.json())
+                .then(review => {
+                    document.getElementById('reviewId').value = review.id;
+                    document.getElementById('apprentice').value = review.apprentice_id;
+                    document.getElementById('content').value = review.content;
+                    document.getElementById('date_of_review').value = review.date_of_review;
+                    document.getElementById('completed').checked = review.completed;
+                    document.getElementById('modalTitle').textContent = 'Edit Review';
+                    reviewModal.show();
+                });
+        }
+
+        function deleteReview(id) {
+            if (confirm('Are you sure you want to delete this review?')) {
+                fetch(`/reviews/${id}`, { method: 'DELETE' })
+                    .then(response => {
+                        if (response.ok) {
+                            location.reload();
+                        } else {
+                            showNotification('Error deleting review', false);
+                        }
+                    });
+            }
+        }
+
+        function saveReview() {
+            const formData = new FormData();
+            const reviewId = document.getElementById('reviewId').value;
+            
+            formData.append('apprentice_id', document.getElementById('apprentice').value);
+            formData.append('content', document.getElementById('content').value);
+            formData.append('date_of_review', document.getElementById('date_of_review').value);
+            formData.append('completed', document.getElementById('completed').checked);
+
+            const reviewDocument = document.getElementById('review_document').files[0];
+            if (reviewDocument) {
+                formData.append('review_document', reviewDocument);
+            }
+
+            const method = reviewId ? 'PUT' : 'POST';
+            const url = reviewId ? `/reviews/${reviewId}` : '/reviews';
+
+            fetch(url, {
+                method: method,
+                body: formData
+            })
+            .then(response => {
+                if (response.ok) {
+                    reviewModal.hide();
+                    showNotification('Review saved successfully', true);
+                    location.reload();
+                } else {
+                    throw new Error('Error saving review');
+                }
+            })
+            .catch(error => {
+                showNotification(error.message, false);
+            });
+        }
+
+        function showNotification(message, isSuccess) {
+            const banner = document.getElementById('notificationBanner');
+            banner.textContent = message;
+            banner.className = `notification-banner ${isSuccess ? 'success' : 'error'}`;
+            banner.style.display = 'block';
+            
+            setTimeout(() => {
+                banner.style.display = 'none';
+            }, 3000);
+        }
+
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('keyup', function(e) {
+            const searchText = e.target.value.toLowerCase();
+            const reviews = document.getElementsByClassName('review-card');
+            
+            Array.from(reviews).forEach(review => {
+                const content = review.textContent.toLowerCase();
+                review.style.display = content.includes(searchText) ? '' : 'none';
+            });
+        });
+
+        function updateReviewStatus(reviewId, completed) {
+            fetch(`/reviews/${reviewId}/status`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ completed: completed })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to update status');
+                }
+                showNotification('Review status updated', true);
+            })
+            .catch(error => {
+                showNotification('Error updating status', false);
+                // Revert checkbox state
+                event.target.checked = !completed;
+            });
+        }
+    </script>
+</body>
+</html>

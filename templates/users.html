@@ -32,14 +32,19 @@
   </head>
   <body>
     <div class="container mt-5">
-      <h1 class="text-center">Manage Users</h1>
-      <button
-        class="btn btn-primary mb-3"
-        data-bs-toggle="modal"
-        data-bs-target="#addUserModal"
-      >
-        Add User
-      </button>
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Manage Users</h1>
+        <div>
+          <button
+            class="btn btn-primary me-2"
+            data-bs-toggle="modal"
+            data-bs-target="#addUserModal"
+          >
+            Add User
+          </button>
+          <a href="/dashboard" class="btn btn-secondary">Back to Dashboard</a>
+        </div>
+      </div>
 
       <div class="table-responsive">
         <table class="table">
@@ -79,14 +84,8 @@
         </table>
       </div>
 
-      <div class="text-center mt-4">
-        <a href="/dashboard" class="btn btn-secondary">Back to Dashboard</a>
-      </div>
-
-      
       <div id="notificationBanner" class="notification-banner"></div>
 
-      
       <div
         class="modal fade"
         id="addUserModal"
@@ -151,7 +150,14 @@
                     <option value="admin">Admin</option>
                   </select>
                 </div>
-                <button type="submit" class="btn btn-primary" id="save-button" disabled>Save</button>
+                <button
+                  type="submit"
+                  class="btn btn-primary"
+                  id="save-button"
+                  disabled
+                >
+                  Save
+                </button>
               </form>
             </div>
           </div>
@@ -173,15 +179,7 @@
       }
 
       document.addEventListener("DOMContentLoaded", function () {
-        
         const passwordInput = document.getElementById("password");
-        const requirements = {
-          length: document.getElementById("length"),
-          uppercase: document.getElementById("uppercase"),
-          lowercase: document.getElementById("lowercase"),
-          number: document.getElementById("number"),
-          special: document.getElementById("special"),
-        };
         const saveButton = document.getElementById("save-button");
 
         passwordInput.addEventListener("input", function () {
@@ -192,116 +190,51 @@
           const numberValid = /[0-9]/.test(value);
           const specialValid = /[!@#$%^&*(),.?":{}|<>]/.test(value);
 
-          requirements.length.style.color = lengthValid ? "green" : "red";
-          requirements.uppercase.style.color = uppercaseValid ? "green" : "red";
-          requirements.lowercase.style.color = lowercaseValid ? "green" : "red";
-          requirements.number.style.color = numberValid ? "green" : "red";
-          requirements.special.style.color = specialValid ? "green" : "red";
-
-          const allValid =
-            lengthValid && uppercaseValid && lowercaseValid && numberValid && specialValid;
-          saveButton.disabled = !allValid;
+          saveButton.disabled = !(lengthValid && uppercaseValid && lowercaseValid && numberValid && specialValid);
         });
       });
 
-      document
-        .getElementById("user-form")
-        .addEventListener("submit", async function (event) {
-          event.preventDefault();
+      document.getElementById("user-form").addEventListener("submit", async function (event) {
+        event.preventDefault();
 
-          if (!window.confirm("Are you sure you want to save these changes?")) {
-            return;
+        if (!window.confirm("Are you sure you want to save these changes?")) {
+          return;
+        }
+
+        const userData = {
+          username: document.getElementById("username").value,
+          password: document.getElementById("password").value,
+          is_admin: document.getElementById("role").value === "admin",
+        };
+
+        try {
+          let response;
+          if (currentUserId) {
+            response = await fetch(`/users/${currentUserId}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(userData),
+            });
+          } else {
+            response = await fetch("/users", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(userData),
+            });
           }
 
-          
-          const userData = {
-            username: document.getElementById("username").value,
-            password: document.getElementById("password").value,
-            is_admin: document.getElementById("role").value === "admin",
-          };
-
-          try {
-            let response;
-            if (currentUserId) {
-              response = await fetch(`/users/${currentUserId}`, {
-                method: "PUT",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify(userData),
-              });
-            } else {
-              response = await fetch("/users", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify(userData),
-              });
-            }
-
-            if (response.ok) {
-              showNotification("User saved successfully", true);
-              location.reload();
-            } else {
-              const errorData = await response.json();
-              showNotification(`Error saving user: ${errorData.detail}`, false);
-            }
-          } catch (error) {
-            showNotification("An error occurred while saving the user", false);
-            console.error("Error:", error);
+          if (response.ok) {
+            showNotification("User saved successfully", true);
+            location.reload();
+          } else {
+            showNotification("Error saving user", false);
           }
+        } catch (error) {
+          showNotification("An error occurred while saving the user", false);
+        }
 
-          currentUserId = null;
-        });
-
-      function editUser(userId) {
-        fetch(`/users/${userId}`, {
-          method: "GET",
-        })
-          .then((response) => {
-            if (!response.ok) {
-              throw new Error("Failed to fetch user");
-            }
-            return response.json();
-          })
-          .then((user) => {
-            document.getElementById("username").value = user.username;
-            document.getElementById("role").value = user.is_admin
-              ? "admin"
-              : "user";
-
-            
-            document.getElementById("addUserModalLabel").innerText =
-              "Update User";
-
-            currentUserId = userId;
-
-            const modal = new bootstrap.Modal(
-              document.getElementById("addUserModal")
-            );
-            modal.show();
-          })
-          .catch((error) => {
-            showNotification("Failed to fetch user details", false);
-            console.error("Error fetching user data:", error);
-          });
-      }
-
-      
-      document
-        .querySelector("[data-bs-target='#addUserModal']")
-        .addEventListener("click", function () {
-          // Clear form fields
-          document.getElementById("username").value = "";
-          document.getElementById("password").value = "";
-          document.getElementById("role").value = "user";
-
-          
-          document.getElementById("addUserModalLabel").innerText = "Add User";
-
-          currentUserId = null; 
-        });
+        currentUserId = null;
+      });
 
       function confirmDeleteUser(userId) {
         if (window.confirm("Are you sure you want to delete this user?")) {
@@ -310,9 +243,7 @@
       }
 
       function deleteUser(userId) {
-        fetch(`/users/${userId}`, {
-          method: "DELETE",
-        })
+        fetch(`/users/${userId}`, { method: "DELETE" })
           .then((response) => {
             if (response.ok) {
               showNotification("User deleted successfully", true);
@@ -321,13 +252,7 @@
               showNotification("Error deleting user", false);
             }
           })
-          .catch((error) => {
-            showNotification(
-              "An error occurred while deleting the user",
-              false
-            );
-            console.error("Error:", error);
-          });
+          .catch(() => showNotification("An error occurred while deleting the user", false));
       }
     </script>
   </body>
