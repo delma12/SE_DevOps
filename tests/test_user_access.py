@@ -1,9 +1,11 @@
-import pytest
 import uuid
+
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
-from main import app
+
 from database import SessionLocal
+from main import app
 from models import User
 
 client = TestClient(app)

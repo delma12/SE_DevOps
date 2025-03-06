@@ -69,5 +69,9 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Run Unit Tests
         run: pytest
+        working-directory: ./tests 

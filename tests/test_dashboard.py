@@ -1,8 +1,9 @@
-from fastapi.testclient import TestClient
-from main import app
-import sys
 import os
+import sys
 
+from fastapi.testclient import TestClient
+
+from main import app
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/.."))
 

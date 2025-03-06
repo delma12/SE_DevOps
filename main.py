@@ -1,29 +1,21 @@
-from fastapi import (
-    FastAPI,
-    Request,
-    Depends,
-    HTTPException,
-    Cookie,
-    Response,
-    Form,
-    File,
-    UploadFile,
-)
-from fastapi.templating import Jinja2Templates
-from sqlalchemy.orm import Session
-from pydantic import BaseModel
-from database import SessionLocal, init_db
-from models import User, Apprentice, Review
-from fastapi.middleware.cors import CORSMiddleware
-from passlib.context import CryptContext
-from fastapi.responses import RedirectResponse
-from typing import List, Optional
-from fastapi.staticfiles import StaticFiles
-from datetime import datetime, date
-import shutil
 import os
-import uvicorn
+import shutil
+from datetime import date, datetime
+from typing import List, Optional
 
+import uvicorn
+from fastapi import (Cookie, Depends, FastAPI, File, Form, HTTPException,
+                     Request, Response, UploadFile)
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from passlib.context import CryptContext
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from database import SessionLocal, init_db
+from models import Apprentice, Review, User
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")

@@ -1,7 +1,9 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Date
-from database import Base
-from sqlalchemy.orm import relationship
 from datetime import timedelta
+
+from sqlalchemy import Boolean, Column, Date, ForeignKey, Integer, String
+from sqlalchemy.orm import relationship
+
+from database import Base
 
 
 class User(Base):
