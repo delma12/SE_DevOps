@@ -1,7 +1,7 @@
-from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, Date
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Date
 from database import Base
 from sqlalchemy.orm import relationship
-from datetime import timedelta, date
+from datetime import timedelta
 
 
 class User(Base):

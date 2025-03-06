@@ -30,13 +30,11 @@ def test_login():
     response = client.post(
         "/login", data={"username": unique_username, "password": valid_password}
     )
-    print("Login Response:", response.text)  # Debugging
-
+    
     assert (
         response.status_code == 200
     ), f"Expected 200, got {response.status_code}, Response: {response.text}"
 
-    # Check if the response includes the dashboard page
     assert "dashboard" in response.text.lower(), "Expected login to show the dashboard"
 
 
