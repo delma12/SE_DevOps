@@ -22,6 +22,7 @@ from fastapi.staticfiles import StaticFiles
 from datetime import datetime, date
 import shutil
 import os
+import uvicorn
 
 
 app = FastAPI()
@@ -606,8 +607,6 @@ async def logout(response: RedirectResponse):
 
 
 if __name__ == "__main__":
-    import uvicorn
-    import os
 
     port = int(os.getenv("PORT", 8000))
     uvicorn.run("main:app", host="0.0.0.0", port=port)

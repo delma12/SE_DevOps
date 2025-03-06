@@ -1,16 +1,15 @@
 from fastapi.testclient import TestClient
+from main import app
 import sys
 import os
+import uuid
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/.."))
 
-from main import app
 
 client = TestClient(app)
 
 valid_password = "Test@1234"
-
-import uuid
 
 
 def test_register_user():

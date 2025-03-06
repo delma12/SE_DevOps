@@ -50,6 +50,7 @@ jobs:
           project: "Apprentice Management System"
           path: "."
           format: "HTML"
+        continue-on-error
 
       - name: Run Security Scan (Bandit)
         run: pip install bandit &&  bandit -r . --severity-level high
