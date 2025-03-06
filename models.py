@@ -5,7 +5,7 @@ from datetime import timedelta, date
 
 
 class User(Base):
-    __tablename__ = 'users'
+    __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
@@ -15,7 +15,7 @@ class User(Base):
 
 
 class Apprentice(Base):
-    __tablename__ = 'apprentices'
+    __tablename__ = "apprentices"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
@@ -24,20 +24,20 @@ class Apprentice(Base):
     cohort_year = Column(Integer)
     job_role = Column(String)
     skills = Column(String)
-    creator_id = Column(Integer, ForeignKey('users.id'))
+    creator_id = Column(Integer, ForeignKey("users.id"))
     creator = relationship("User", back_populates="apprentices")
     reviews = relationship("Review", back_populates="apprentice")
 
-    
+
 class Review(Base):
-    __tablename__ = 'reviews'
+    __tablename__ = "reviews"
 
     id = Column(Integer, primary_key=True, index=True)
     content = Column(String)
-    apprentice_id = Column(Integer, ForeignKey('apprentices.id'))
-    user_id = Column(Integer, ForeignKey('users.id'))
+    apprentice_id = Column(Integer, ForeignKey("apprentices.id"))
+    user_id = Column(Integer, ForeignKey("users.id"))
     date_of_review = Column(Date)
-    progress_review_form = Column(String, nullable=True)  
+    progress_review_form = Column(String, nullable=True)
     completed = Column(Boolean, default=False)
 
     apprentice = relationship("Apprentice", back_populates="reviews")

@@ -1,4 +1,14 @@
-from fastapi import FastAPI, Request, Depends, HTTPException, Cookie, Response, Form, File, UploadFile
+from fastapi import (
+    FastAPI,
+    Request,
+    Depends,
+    HTTPException,
+    Cookie,
+    Response,
+    Form,
+    File,
+    UploadFile,
+)
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -12,7 +22,6 @@ from fastapi.staticfiles import StaticFiles
 from datetime import datetime, date, timedelta
 import shutil
 import os
-
 
 
 app = FastAPI()
@@ -46,8 +55,9 @@ def get_db():
 def create_admin_user(db: Session):
     if not db.query(User).filter(User.username == "admin").first():
         hashed_password = pwd_context.hash("adminpassword")
-        admin_user = User(username="admin",
-                          hashed_password=hashed_password, is_admin=True)
+        admin_user = User(
+            username="admin", hashed_password=hashed_password, is_admin=True
+        )
         db.add(admin_user)
         db.commit()
 
@@ -127,11 +137,13 @@ class ApprenticeResponse(BaseModel):
     class Config:
         orm_mode = True
 
+
 class ReviewCreate(BaseModel):
     content: str
     apprentice_id: int
     date_of_review: date
     completed: bool = False
+
 
 class ReviewUpdate(BaseModel):
     content: str
@@ -146,32 +158,32 @@ class ReviewResponse(BaseModel):
     apprentice_id: int
     user_id: int
     date_of_review: date
-    progress_review_form: Optional[str] = None  
+    progress_review_form: Optional[str] = None
     completed: bool = False
 
     class Config:
-         from_attributes = True
+        from_attributes = True
 
 
-@app.get('/')
+@app.get("/")
 async def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 
-@app.post('/login', response_class=RedirectResponse)
+@app.post("/login", response_class=RedirectResponse)
 async def login_post(request: Request, db: Session = Depends(get_db)):
     form = await request.form()
     username = form.get("username")
     password = form.get("password")
     user = db.query(User).filter(User.username == username).first()
     if user and pwd_context.verify(password, user.hashed_password):
-        response = RedirectResponse(url='/dashboard', status_code=302)
+        response = RedirectResponse(url="/dashboard", status_code=302)
         response.set_cookie(key="username", value=username)
         return response
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
 
-@app.post('/register')
+@app.post("/register")
 async def register_post(request: Request, db: Session = Depends(get_db)):
     form = await request.form()
     username = form.get("username")
@@ -182,39 +194,60 @@ async def register_post(request: Request, db: Session = Depends(get_db)):
     new_user = User(username=username, hashed_password=hashed_password)
     db.add(new_user)
     db.commit()
-    return templates.TemplateResponse("index.html", {"request": request, "message": "Registration successful! You can now log in."})
+    return templates.TemplateResponse(
+        "index.html",
+        {"request": request, "message": "Registration successful! You can now log in."},
+    )
 
 
-@app.get('/dashboard')
+@app.get("/dashboard")
 async def dashboard(request: Request, user: UserResponse = Depends(get_current_user)):
     title = f"Welcome, {'Admin' if user.is_admin else user.username}'s Dashboard"
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request,
-        "title": title,
-        "is_admin": user.is_admin
-    })
+    return templates.TemplateResponse(
+        "dashboard.html",
+        {"request": request, "title": title, "is_admin": user.is_admin},
+    )
 
-@app.get('/users', response_model=List[UserResponse])
-async def get_users(request: Request, db: Session = Depends(get_db), user: UserResponse = Depends(get_current_user)):
+
+@app.get("/users", response_model=List[UserResponse])
+async def get_users(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: UserResponse = Depends(get_current_user),
+):
     is_admin(user)
     users = db.query(User).all()
-    return templates.TemplateResponse("users.html", {"request": request, "users": users, "is_admin": user.is_admin})
+    return templates.TemplateResponse(
+        "users.html", {"request": request, "users": users, "is_admin": user.is_admin}
+    )
 
 
-@app.post('/users', response_model=UserResponse)
-async def create_user(user_data: UserCreate, db: Session = Depends(get_db), current_user: UserResponse = Depends(get_current_user)):
+@app.post("/users", response_model=UserResponse)
+async def create_user(
+    user_data: UserCreate,
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user),
+):
     is_admin(current_user)
     hashed_password = pwd_context.hash(user_data.password)
-    new_user = User(username=user_data.username,
-                    hashed_password=hashed_password, is_admin=user_data.is_admin)
+    new_user = User(
+        username=user_data.username,
+        hashed_password=hashed_password,
+        is_admin=user_data.is_admin,
+    )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
     return new_user
 
 
-@app.put('/users/{user_id}', response_model=UserResponse)
-async def update_user(user_id: int, user_data: UserUpdate, db: Session = Depends(get_db), current_user: UserResponse = Depends(get_current_user)):
+@app.put("/users/{user_id}", response_model=UserResponse)
+async def update_user(
+    user_id: int,
+    user_data: UserUpdate,
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user),
+):
     is_admin(current_user)
     db_user = db.query(User).filter(User.id == user_id).first()
     if not db_user:
@@ -238,8 +271,12 @@ async def get_user(user_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
 
 
-@app.delete('/users/{user_id}', response_model=UserResponse)
-async def delete_user(user_id: int, db: Session = Depends(get_db), current_user: UserResponse = Depends(get_current_user)):
+@app.delete("/users/{user_id}", response_model=UserResponse)
+async def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user),
+):
     is_admin(current_user)
     db_user = db.query(User).filter(User.id == user_id).first()
     if not db_user:
@@ -249,19 +286,30 @@ async def delete_user(user_id: int, db: Session = Depends(get_db), current_user:
     return db_user
 
 
-@app.get('/apprentices')
-async def apprentices(request: Request, db: Session = Depends(get_db), user: UserResponse = Depends(get_current_user)):
+@app.get("/apprentices")
+async def apprentices(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: UserResponse = Depends(get_current_user),
+):
     apprentices = db.query(Apprentice).all()
-    return templates.TemplateResponse("apprentice.html", {
-        "request": request,
-        "apprentices": apprentices,
-        "is_admin": user.is_admin,
-        "current_user": user
-    })
+    return templates.TemplateResponse(
+        "apprentice.html",
+        {
+            "request": request,
+            "apprentices": apprentices,
+            "is_admin": user.is_admin,
+            "current_user": user,
+        },
+    )
 
 
-@app.post('/apprentices', response_model=ApprenticeResponse)
-async def create_apprentice(apprentice_data: ApprenticeCreate, db: Session = Depends(get_db), current_user: UserResponse = Depends(get_current_user)):
+@app.post("/apprentices", response_model=ApprenticeResponse)
+async def create_apprentice(
+    apprentice_data: ApprenticeCreate,
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user),
+):
     new_apprentice = Apprentice(
         name=apprentice_data.name,
         email=apprentice_data.email,
@@ -269,14 +317,15 @@ async def create_apprentice(apprentice_data: ApprenticeCreate, db: Session = Dep
         cohort_year=apprentice_data.cohort_year,
         job_role=apprentice_data.job_role,
         skills=apprentice_data.skills,
-        creator_id=current_user.id
+        creator_id=current_user.id,
     )
     db.add(new_apprentice)
     db.commit()
     db.refresh(new_apprentice)
 
-    creator_username = db.query(User.username).filter(
-        User.id == current_user.id).scalar()
+    creator_username = (
+        db.query(User.username).filter(User.id == current_user.id).scalar()
+    )
 
     return ApprenticeResponse(
         id=new_apprentice.id,
@@ -286,18 +335,24 @@ async def create_apprentice(apprentice_data: ApprenticeCreate, db: Session = Dep
         cohort_year=new_apprentice.cohort_year,
         job_role=new_apprentice.job_role,
         skills=new_apprentice.skills,
-        creator_username=creator_username
+        creator_username=creator_username,
     )
 
 
-@app.get('/apprentices/{apprentice_id}', response_model=ApprenticeResponse)
-async def get_apprentice(apprentice_id: int, db: Session = Depends(get_db), user: UserResponse = Depends(get_current_user)):
+@app.get("/apprentices/{apprentice_id}", response_model=ApprenticeResponse)
+async def get_apprentice(
+    apprentice_id: int,
+    db: Session = Depends(get_db),
+    user: UserResponse = Depends(get_current_user),
+):
     apprentice = db.query(Apprentice).filter(Apprentice.id == apprentice_id).first()
     if not apprentice:
         raise HTTPException(status_code=404, detail="Apprentice not found")
 
-    
-    creator_username = db.query(User.username).filter(User.id == apprentice.creator_id).scalar() or "Deleted User"
+    creator_username = (
+        db.query(User.username).filter(User.id == apprentice.creator_id).scalar()
+        or "Deleted User"
+    )
 
     return ApprenticeResponse(
         id=apprentice.id,
@@ -307,32 +362,31 @@ async def get_apprentice(apprentice_id: int, db: Session = Depends(get_db), user
         cohort_year=apprentice.cohort_year,
         job_role=apprentice.job_role,
         skills=apprentice.skills,
-        creator_username=creator_username
+        creator_username=creator_username,
     )
 
 
-
-@app.put('/apprentices/{apprentice_id}', response_model=ApprenticeResponse)
+@app.put("/apprentices/{apprentice_id}", response_model=ApprenticeResponse)
 async def update_apprentice(
     apprentice_id: int,
     apprentice_data: ApprenticeUpdate,
     db: Session = Depends(get_db),
-    current_user: UserResponse = Depends(get_current_user)
+    current_user: UserResponse = Depends(get_current_user),
 ):
-    
+
     db_apprentice = db.query(Apprentice).filter(Apprentice.id == apprentice_id).first()
 
     if not db_apprentice:
         raise HTTPException(status_code=404, detail="Apprentice not found")
 
-    
     if is_admin(current_user):
-        
+
         pass
     elif db_apprentice.creator_id != current_user.id:
-        
-        raise HTTPException(status_code=403, detail="Not authorised to edit this apprentice")
 
+        raise HTTPException(
+            status_code=403, detail="Not authorised to edit this apprentice"
+        )
 
     db_apprentice.name = apprentice_data.name
     db_apprentice.email = apprentice_data.email
@@ -355,30 +409,26 @@ async def update_apprentice(
         cohort_year=db_apprentice.cohort_year,
         job_role=db_apprentice.job_role,
         skills=db_apprentice.skills,
-        creator_username=creator_username
+        creator_username=creator_username,
     )
 
 
-
-
-@app.delete('/apprentices/{apprentice_id}', response_model=ApprenticeResponse)
-async def delete_apprentice(apprentice_id: int, db: Session = Depends(get_db), user: UserResponse = Depends(get_current_user)):
+@app.delete("/apprentices/{apprentice_id}", response_model=ApprenticeResponse)
+async def delete_apprentice(
+    apprentice_id: int,
+    db: Session = Depends(get_db),
+    user: UserResponse = Depends(get_current_user),
+):
     is_admin(user)
 
-   
-    db_apprentice = db.query(Apprentice).filter(
-        Apprentice.id == apprentice_id).first()
+    db_apprentice = db.query(Apprentice).filter(Apprentice.id == apprentice_id).first()
     if not db_apprentice:
         raise HTTPException(status_code=404, detail="Apprentice not found")
 
-   
-    creator = db.query(User).filter(
-        User.id == db_apprentice.creator_id).first()
+    creator = db.query(User).filter(User.id == db_apprentice.creator_id).first()
 
-   
     creator_username = creator.username if creator else "Deleted User"
 
-    
     response = ApprenticeResponse(
         id=db_apprentice.id,
         name=db_apprentice.name,
@@ -387,27 +437,34 @@ async def delete_apprentice(apprentice_id: int, db: Session = Depends(get_db), u
         cohort_year=db_apprentice.cohort_year,
         job_role=db_apprentice.job_role,
         skills=db_apprentice.skills,
-        creator_username=creator_username  
+        creator_username=creator_username,
     )
 
-    
     db.delete(db_apprentice)
     db.commit()
 
     return response
 
 
-@app.get('/reviews')
-async def reviews(request: Request, db: Session = Depends(get_db), user: UserResponse = Depends(get_current_user)):
+@app.get("/reviews")
+async def reviews(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: UserResponse = Depends(get_current_user),
+):
     reviews = db.query(Review).join(Review.apprentice).join(Review.user).all()
     apprentices = db.query(Apprentice).all()
-    return templates.TemplateResponse("reviews.html", {
-        "request": request,
-        "reviews": reviews,
-        "apprentices": apprentices,
-        "is_admin": user.is_admin,
-        "current_user": user
-    })
+    return templates.TemplateResponse(
+        "reviews.html",
+        {
+            "request": request,
+            "reviews": reviews,
+            "apprentices": apprentices,
+            "is_admin": user.is_admin,
+            "current_user": user,
+        },
+    )
+
 
 @app.post("/reviews", response_model=ReviewResponse)
 async def create_review(
@@ -417,7 +474,7 @@ async def create_review(
     completed: bool = Form(False),
     review_document: UploadFile = File(None),
     db: Session = Depends(get_db),
-    current_user: UserResponse = Depends(get_current_user)
+    current_user: UserResponse = Depends(get_current_user),
 ):
     try:
         document_path = None
@@ -426,7 +483,7 @@ async def create_review(
             os.makedirs(upload_dir, exist_ok=True)
             filename = f"review_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{review_document.filename}"
             document_path = os.path.join(upload_dir, filename)
-            
+
             with open(document_path, "wb") as buffer:
                 shutil.copyfileobj(review_document.file, buffer)
 
@@ -434,31 +491,37 @@ async def create_review(
             content=content,
             apprentice_id=apprentice_id,
             user_id=current_user.id,
-            date_of_review=datetime.strptime(date_of_review, '%Y-%m-%d').date(),
+            date_of_review=datetime.strptime(date_of_review, "%Y-%m-%d").date(),
             progress_review_form=document_path,
-            completed=completed
+            completed=completed,
         )
-        
+
         db.add(new_review)
         db.commit()
         db.refresh(new_review)
-        
+
         return new_review
-        
+
     except Exception as e:
         if document_path and os.path.exists(document_path):
             os.remove(document_path)
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.get('/reviews/{review_id}', response_model=ReviewResponse)
-async def get_review(review_id: int, db: Session = Depends(get_db), user: UserResponse = Depends(get_current_user)):
+
+@app.get("/reviews/{review_id}", response_model=ReviewResponse)
+async def get_review(
+    review_id: int,
+    db: Session = Depends(get_db),
+    user: UserResponse = Depends(get_current_user),
+):
     review = db.query(Review).filter(Review.id == review_id).first()
     if not review:
         raise HTTPException(status_code=404, detail="Review not found")
     return review
 
-@app.put('/reviews/{review_id}', response_model=ReviewResponse)
+
+@app.put("/reviews/{review_id}", response_model=ReviewResponse)
 async def update_review(
     review_id: int,
     apprentice_id: int = Form(...),
@@ -467,7 +530,7 @@ async def update_review(
     completed: bool = Form(False),
     review_document: UploadFile = File(None),
     db: Session = Depends(get_db),
-    current_user: UserResponse = Depends(get_current_user)
+    current_user: UserResponse = Depends(get_current_user),
 ):
     # Get existing review
     review = db.query(Review).filter(Review.id == review_id).first()
@@ -476,7 +539,9 @@ async def update_review(
 
     # Check permissions
     if not current_user.is_admin and review.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorised to edit this review")
+        raise HTTPException(
+            status_code=403, detail="Not authorised to edit this review"
+        )
 
     try:
         # Handle file upload if provided
@@ -493,16 +558,16 @@ async def update_review(
             os.makedirs(upload_dir, exist_ok=True)
             filename = f"review_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{review_document.filename}"
             document_path = os.path.join(upload_dir, filename)
-            
+
             with open(document_path, "wb") as buffer:
                 shutil.copyfileobj(review_document.file, buffer)
-            
+
             review.progress_review_form = document_path
 
         # Update review fields
         review.apprentice_id = apprentice_id
         review.content = content
-        review.date_of_review = datetime.strptime(date_of_review, '%Y-%m-%d').date()
+        review.date_of_review = datetime.strptime(date_of_review, "%Y-%m-%d").date()
         review.completed = completed
 
         db.commit()
@@ -514,10 +579,16 @@ async def update_review(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.delete('/reviews/{review_id}')
-async def delete_review(review_id: int, db: Session = Depends(get_db), user: UserResponse = Depends(get_current_user)):
+@app.delete("/reviews/{review_id}")
+async def delete_review(
+    review_id: int,
+    db: Session = Depends(get_db),
+    user: UserResponse = Depends(get_current_user),
+):
     if not user.is_admin:
-        raise HTTPException(status_code=403, detail="Only administrators can delete reviews")
+        raise HTTPException(
+            status_code=403, detail="Only administrators can delete reviews"
+        )
 
     review = db.query(Review).filter(Review.id == review_id).first()
     if not review:
@@ -528,19 +599,19 @@ async def delete_review(review_id: int, db: Session = Depends(get_db), user: Use
     return {"message": "Review deleted successfully"}
 
 
-
-@app.get('/logout')
+@app.get("/logout")
 async def logout(response: RedirectResponse):
     response.delete_cookie(key="username")
-    return RedirectResponse(url='/')
+    return RedirectResponse(url="/")
 
 
 if __name__ == "__main__":
     import uvicorn
     import os
 
-    port = int(os.getenv("PORT", 8000))  
+    port = int(os.getenv("PORT", 8000))
     uvicorn.run("main:app", host="0.0.0.0", port=port)
+
 
 @app.head("/")
 async def head_index():

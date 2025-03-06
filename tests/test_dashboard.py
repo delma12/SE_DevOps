@@ -9,6 +9,7 @@ from main import app  # Now it should work
 
 client = TestClient(app)
 
+
 def test_dashboard_requires_login():
     response = client.get("/dashboard")
     assert response.status_code == 403
