@@ -13,7 +13,7 @@ client = TestClient(app)
 def db_session():
     session = SessionLocal()
     yield session
-    session.rollback()  
+    session.rollback()
     session.close()
 
 

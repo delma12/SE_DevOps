@@ -30,7 +30,7 @@ def test_login():
     response = client.post(
         "/login", data={"username": unique_username, "password": valid_password}
     )
-    
+
     assert (
         response.status_code == 200
     ), f"Expected 200, got {response.status_code}, Response: {response.text}"
