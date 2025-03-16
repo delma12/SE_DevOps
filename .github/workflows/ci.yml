@@ -35,7 +35,7 @@ jobs:
         run: pip install flake8 && flake8 --max-line-length=127 --exclude tests,.venv,venv . 
 
       - name: Run Import Sorting (isort)
-        run: pip install isort && isort --check-only --skip tests --settings-path ./isort.cfg .
+        run: pip install isort && isort --check-only --skip tests .
 
       - name: Format Code (Black)
         run: pip install black && black --check .
