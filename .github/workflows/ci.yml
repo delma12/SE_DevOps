@@ -82,7 +82,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run Unit Tests
-        run: pytest
+        run: pytest --disable-warnings
         working-directory: ./tests 
 
 
