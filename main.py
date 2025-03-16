@@ -4,8 +4,17 @@ from datetime import date, datetime
 from typing import List, Optional, Annotated
 
 import uvicorn
-from fastapi import (Cookie, Depends, FastAPI, File, Form, HTTPException,
-                     Request, Response, UploadFile)
+from fastapi import (
+    Cookie,
+    Depends,
+    FastAPI,
+    File,
+    Form,
+    HTTPException,
+    Request,
+    Response,
+    UploadFile,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -28,7 +37,6 @@ init_db()
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 
 
 app.add_middleware(
@@ -85,13 +93,17 @@ def is_admin(user: User):
 
 
 class UserCreate(BaseModel):
-    username: Annotated[str, Field(min_length=3, max_length=20, pattern=r"^[a-zA-Z0-9_-]+$")]
+    username: Annotated[
+        str, Field(min_length=3, max_length=20, pattern=r"^[a-zA-Z0-9_-]+$")
+    ]
     password: Annotated[str, Field(min_length=8, max_length=100)]
     is_admin: bool = False
 
 
 class UserUpdate(BaseModel):
-    username: Annotated[str, Field(min_length=3, max_length=20, pattern=r"^[a-zA-Z0-9_-]+$")]
+    username: Annotated[
+        str, Field(min_length=3, max_length=20, pattern=r"^[a-zA-Z0-9_-]+$")
+    ]
     password: Annotated[str, Field(min_length=8, max_length=100)]
     is_admin: bool = False
 
