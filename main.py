@@ -1,20 +1,12 @@
 import os
 import shutil
 from datetime import date, datetime
-from typing import List, Optional, Annotated
+from typing import Annotated, List, Optional
 
 import uvicorn
-from fastapi import (
-    Cookie,
-    Depends,
-    FastAPI,
-    File,
-    Form,
-    HTTPException,
-    Request,
-    Response,
-    UploadFile,
-)
+from dotenv import load_dotenv
+from fastapi import (Cookie, Depends, FastAPI, File, Form, HTTPException,
+                     Request, Response, UploadFile)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -25,7 +17,6 @@ from sqlalchemy.orm import Session
 
 from database import SessionLocal, init_db
 from models import Apprentice, Review, User
-from dotenv import load_dotenv
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")

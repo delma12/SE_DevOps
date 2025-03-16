@@ -1,13 +1,14 @@
 import uuid
+
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy.orm import Session
 from passlib.context import CryptContext
+from sqlalchemy.orm import Session
 
+from models import User
 
 from ..database import SessionLocal
 from ..main import app
-from models import User
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
