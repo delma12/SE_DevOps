@@ -5,17 +5,8 @@ from typing import Annotated, List, Optional
 
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import (
-    Cookie,
-    Depends,
-    FastAPI,
-    File,
-    Form,
-    HTTPException,
-    Request,
-    Response,
-    UploadFile,
-)
+from fastapi import (Cookie, Depends, FastAPI, File, Form, HTTPException,
+                     Request, Response, UploadFile)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles

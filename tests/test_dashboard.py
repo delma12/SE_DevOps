@@ -11,9 +11,11 @@ client = TestClient(app)
 
 
 from unittest.mock import MagicMock
+
 import pytest
 from fastapi import FastAPI
 from starlette.staticfiles import StaticFiles
+
 
 @pytest.fixture(autouse=True)
 def mock_static_files():
