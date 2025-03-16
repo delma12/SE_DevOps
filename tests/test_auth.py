@@ -1,10 +1,10 @@
+
 import os
 import sys
 import uuid
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/.."))
-
-from unittest.mock import MagicMock
 
 import pytest
 from fastapi import FastAPI
@@ -28,7 +28,12 @@ def mock_static_files():
 valid_password = "Test@1234"
 
 
-def test_register_user():
+@patch('fastapi.templating.Jinja2Templates.TemplateResponse')
+def test_register_user(mock_template):
+    mock_template.return_value = {
+        "status_code": 200,
+        "content": b"Registration successful"
+    }
     unique_username = f"user_{uuid.uuid4().hex[:8]}"  # Random username
     response = client.post(
         "/register", data={"username": unique_username, "password": "Test@1234"}
@@ -36,7 +41,14 @@ def test_register_user():
     assert response.status_code == 200
 
 
-def test_login():
+@patch('fastapi.templating.Jinja2Templates.TemplateResponse')
+def test_login(mock_template):
+    # Mock the template response for registration
+    mock_template.return_value = {
+        "status_code": 200,
+        "content": b"<html><body><h1>Dashboard</h1></body></html>"
+    }
+    
     unique_username = "testuser123"
     client.post(
         "/register", data={"username": unique_username, "password": valid_password}

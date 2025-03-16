@@ -1,25 +1,21 @@
+
 import uuid
+from unittest.mock import MagicMock, patch
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
+from starlette.staticfiles import StaticFiles
 
 from models import User
-
 from ..database import SessionLocal
 from ..main import app
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 client = TestClient(app)
-
-
-from unittest.mock import MagicMock
-
-import pytest
-from fastapi import FastAPI
-from starlette.staticfiles import StaticFiles
 
 
 @pytest.fixture(autouse=True)
@@ -33,7 +29,6 @@ def mock_static_files():
 
 @pytest.fixture
 def db_session():
-
     session = SessionLocal()
     yield session
     session.rollback()
@@ -41,7 +36,14 @@ def db_session():
 
 
 @pytest.fixture
-def admin_login(db_session):
+@patch('fastapi.templating.Jinja2Templates.TemplateResponse')
+def admin_login(mock_template, db_session):
+    # Mock the template response for login
+    mock_template.return_value = {
+        "status_code": 200,
+        "content": b"<html><body><h1>Dashboard</h1></body></html>"
+    }
+
     admin_username = f"admin_{uuid.uuid4().hex[:6]}"  # Unique admin username
     admin_password = "test_admin_password"
 
@@ -62,8 +64,15 @@ def admin_login(db_session):
     return response.cookies
 
 
-def test_admin_can_create_user(db_session: Session, admin_login):
+@patch('fastapi.templating.Jinja2Templates.TemplateResponse')
+def test_admin_can_create_user(mock_template, db_session: Session, admin_login):
     """Test that an admin user can create a new user."""
+    # Mock the template response for user creation
+    mock_template.return_value = {
+        "status_code": 201,
+        "content": b"User created successfully"
+    }
+
     unique_username = f"testuser_{uuid.uuid4().hex[:6]}"
 
     new_user_data = {
