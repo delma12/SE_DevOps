@@ -4,7 +4,6 @@ import sys
 from fastapi.testclient import TestClient
 
 from ..main import app
-from ..database import SessionLocal
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/.."))
 

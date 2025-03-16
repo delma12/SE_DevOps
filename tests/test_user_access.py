@@ -2,10 +2,8 @@ import uuid
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
-from dotenv import load_dotenv
 from passlib.context import CryptContext
 
-load_dotenv()
 
 from ..database import SessionLocal
 from ..main import app
