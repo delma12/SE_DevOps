@@ -1,7 +1,7 @@
 import os
 import shutil
 from datetime import date, datetime
-from typing import List, Optional
+from typing import List, Optional, Annotated
 
 import uvicorn
 from fastapi import (Cookie, Depends, FastAPI, File, Form, HTTPException,
@@ -11,21 +11,24 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from passlib.context import CryptContext
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from database import SessionLocal, init_db
 from models import Apprentice, Review, User
+from dotenv import load_dotenv
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+load_dotenv()
 
 init_db()
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 
 
 app.add_middleware(
@@ -46,10 +49,13 @@ def get_db():
 
 
 def create_admin_user(db: Session):
-    if not db.query(User).filter(User.username == "admin").first():
-        hashed_password = pwd_context.hash("adminpassword")
+    admin_username = os.getenv("ADMIN_USERNAME", "admin")
+    admin_password = os.getenv("ADMIN_PASSWORD", "defaultpassword")
+
+    if not db.query(User).filter(User.username == admin_username).first():
+        hashed_password = pwd_context.hash(admin_password)
         admin_user = User(
-            username="admin", hashed_password=hashed_password, is_admin=True
+            username=admin_username, hashed_password=hashed_password, is_admin=True
         )
         db.add(admin_user)
         db.commit()
@@ -79,14 +85,14 @@ def is_admin(user: User):
 
 
 class UserCreate(BaseModel):
-    username: str
-    password: str
+    username: Annotated[str, Field(min_length=3, max_length=20, pattern=r"^[a-zA-Z0-9_-]+$")]
+    password: Annotated[str, Field(min_length=8, max_length=100)]
     is_admin: bool = False
 
 
 class UserUpdate(BaseModel):
-    username: str
-    password: str = None
+    username: Annotated[str, Field(min_length=3, max_length=20, pattern=r"^[a-zA-Z0-9_-]+$")]
+    password: Annotated[str, Field(min_length=8, max_length=100)]
     is_admin: bool = False
 
 
@@ -208,6 +214,7 @@ async def get_users(
     db: Session = Depends(get_db),
     user: UserResponse = Depends(get_current_user),
 ):
+    # blocks all non-admin users
     is_admin(user)
     users = db.query(User).all()
     return templates.TemplateResponse(
@@ -234,6 +241,16 @@ async def create_user(
     return new_user
 
 
+@app.get("/users/{user_id}", response_model=UserResponse)
+async def get_user(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if user:
+        return user
+    else:
+        raise HTTPException(status_code=404, detail="User not found")
+
+
 @app.put("/users/{user_id}", response_model=UserResponse)
 async def update_user(
     user_id: int,
@@ -252,16 +269,6 @@ async def update_user(
     db.commit()
     db.refresh(db_user)
     return db_user
-
-
-@app.get("/users/{user_id}", response_model=UserResponse)
-async def get_user(user_id: int, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
-
-    if user:
-        return user
-    else:
-        raise HTTPException(status_code=404, detail="User not found")
 
 
 @app.delete("/users/{user_id}", response_model=UserResponse)
