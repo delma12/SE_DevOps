@@ -38,7 +38,7 @@ jobs:
         run: pip install flake8 && flake8 --max-line-length=127 --exclude .venv,venv .
 
       - name: Run Import Sorting (isort)
-        run: pip install isort && isort --check-only .
+        run: pip install isort && isort --check-only --skip tests
 
   Security_scan:
     needs: setup

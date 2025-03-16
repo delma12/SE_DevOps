@@ -1,18 +1,24 @@
 import uuid
-
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
+from dotenv import load_dotenv
+from passlib.context import CryptContext
 
-from database import SessionLocal
-from main import app
+load_dotenv()
+
+from ..database import SessionLocal
+from ..main import app
 from models import User
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 client = TestClient(app)
 
 
 @pytest.fixture
 def db_session():
+
     session = SessionLocal()
     yield session
     session.rollback()
@@ -20,15 +26,29 @@ def db_session():
 
 
 @pytest.fixture
-def admin_login():
-    admin_credentials = {"username": "admin", "password": "adminpassword"}
+def admin_login(db_session):
+    admin_username = f"admin_{uuid.uuid4().hex[:6]}"  # Unique admin username
+    admin_password = "test_admin_password"
+
+    # Create a new admin user
+    hashed_password = pwd_context.hash(admin_password)
+    admin_user = User(
+        username=admin_username, hashed_password=hashed_password, is_admin=True
+    )
+    db_session.add(admin_user)
+    db_session.commit()
+
+    print(f"Created admin user: {admin_username}")
+
+    admin_credentials = {"username": admin_username, "password": admin_password}
     response = client.post("/login", data=admin_credentials)
+
     assert response.status_code == 200, f"Admin login failed: {response.text}"
-    return response.cookies  # Return session cookies for authentication
+    return response.cookies
 
 
 def test_admin_can_create_user(db_session: Session, admin_login):
-
+    """Test that an admin user can create a new user."""
     unique_username = f"testuser_{uuid.uuid4().hex[:6]}"
 
     new_user_data = {
