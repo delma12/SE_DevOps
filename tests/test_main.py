@@ -9,6 +9,19 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/.."))
 
 client = TestClient(app)
 
+from unittest.mock import MagicMock
+import pytest
+from fastapi import FastAPI
+from starlette.staticfiles import StaticFiles
+
+@pytest.fixture(autouse=True)
+def mock_static_files():
+    # Mock StaticFiles to avoid the error during tests
+    app = FastAPI()
+    app.mount = MagicMock()
+    app.mount("/static", MagicMock(), name="static")
+    return app
+
 
 def test_health_check():
     response = client.head("/")
