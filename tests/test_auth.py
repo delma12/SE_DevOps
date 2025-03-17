@@ -1,4 +1,3 @@
-
 import os
 import sys
 import uuid
@@ -28,11 +27,11 @@ def mock_static_files():
 valid_password = "Test@1234"
 
 
-@patch('fastapi.templating.Jinja2Templates.TemplateResponse')
+@patch("fastapi.templating.Jinja2Templates.TemplateResponse")
 def test_register_user(mock_template):
     mock_template.return_value = {
         "status_code": 200,
-        "content": b"Registration successful"
+        "content": b"Registration successful",
     }
     unique_username = f"user_{uuid.uuid4().hex[:8]}"  # Random username
     response = client.post(
@@ -41,14 +40,14 @@ def test_register_user(mock_template):
     assert response.status_code == 200
 
 
-@patch('fastapi.templating.Jinja2Templates.TemplateResponse')
+@patch("fastapi.templating.Jinja2Templates.TemplateResponse")
 def test_login(mock_template):
     # Mock the template response for registration
     mock_template.return_value = {
         "status_code": 200,
-        "content": b"<html><body><h1>Dashboard</h1></body></html>"
+        "content": b"<html><body><h1>Dashboard</h1></body></html>",
     }
-    
+
     unique_username = "testuser123"
     client.post(
         "/register", data={"username": unique_username, "password": valid_password}

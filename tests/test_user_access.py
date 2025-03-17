@@ -1,4 +1,3 @@
-
 import uuid
 from unittest.mock import MagicMock, patch
 
@@ -36,12 +35,12 @@ def db_session():
 
 
 @pytest.fixture
-@patch('fastapi.templating.Jinja2Templates.TemplateResponse')
+@patch("fastapi.templating.Jinja2Templates.TemplateResponse")
 def admin_login(mock_template, db_session):
     # Mock the template response for login
     mock_template.return_value = {
         "status_code": 200,
-        "content": b"<html><body><h1>Dashboard</h1></body></html>"
+        "content": b"<html><body><h1>Dashboard</h1></body></html>",
     }
 
     admin_username = f"admin_{uuid.uuid4().hex[:6]}"  # Unique admin username
@@ -64,13 +63,13 @@ def admin_login(mock_template, db_session):
     return response.cookies
 
 
-@patch('fastapi.templating.Jinja2Templates.TemplateResponse')
+@patch("fastapi.templating.Jinja2Templates.TemplateResponse")
 def test_admin_can_create_user(mock_template, db_session: Session, admin_login):
     """Test that an admin user can create a new user."""
     # Mock the template response for user creation
     mock_template.return_value = {
         "status_code": 201,
-        "content": b"User created successfully"
+        "content": b"User created successfully",
     }
 
     unique_username = f"testuser_{uuid.uuid4().hex[:6]}"
