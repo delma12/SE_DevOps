@@ -171,7 +171,9 @@
       function showNotification(message, isSuccess) {
         const banner = document.getElementById("notificationBanner");
         banner.textContent = message;
-        banner.className = `notification-banner ${isSuccess ? "success" : "error"}`;
+        banner.className = `notification-banner ${
+          isSuccess ? "success" : "error"
+        }`;
         banner.style.display = "block";
         setTimeout(() => {
           banner.style.display = "none";
@@ -190,51 +192,59 @@
           const numberValid = /[0-9]/.test(value);
           const specialValid = /[!@#$%^&*(),.?":{}|<>]/.test(value);
 
-          saveButton.disabled = !(lengthValid && uppercaseValid && lowercaseValid && numberValid && specialValid);
+          saveButton.disabled = !(
+            lengthValid &&
+            uppercaseValid &&
+            lowercaseValid &&
+            numberValid &&
+            specialValid
+          );
         });
       });
 
-      document.getElementById("user-form").addEventListener("submit", async function (event) {
-        event.preventDefault();
+      document
+        .getElementById("user-form")
+        .addEventListener("submit", async function (event) {
+          event.preventDefault();
 
-        if (!window.confirm("Are you sure you want to save these changes?")) {
-          return;
-        }
-
-        const userData = {
-          username: document.getElementById("username").value,
-          password: document.getElementById("password").value,
-          is_admin: document.getElementById("role").value === "admin",
-        };
-
-        try {
-          let response;
-          if (currentUserId) {
-            response = await fetch(`/users/${currentUserId}`, {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(userData),
-            });
-          } else {
-            response = await fetch("/users", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(userData),
-            });
+          if (!window.confirm("Are you sure you want to save these changes?")) {
+            return;
           }
 
-          if (response.ok) {
-            showNotification("User saved successfully", true);
-            location.reload();
-          } else {
-            showNotification("Error saving user", false);
-          }
-        } catch (error) {
-          showNotification("An error occurred while saving the user", false);
-        }
+          const userData = {
+            username: document.getElementById("username").value,
+            password: document.getElementById("password").value,
+            is_admin: document.getElementById("role").value === "admin",
+          };
 
-        currentUserId = null;
-      });
+          try {
+            let response;
+            if (currentUserId) {
+              response = await fetch(`/users/${currentUserId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(userData),
+              });
+            } else {
+              response = await fetch("/users", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(userData),
+              });
+            }
+
+            if (response.ok) {
+              showNotification("User saved successfully", true);
+              location.reload();
+            } else {
+              showNotification("Error saving user", false);
+            }
+          } catch (error) {
+            showNotification("An error occurred while saving the user", false);
+          }
+
+          currentUserId = null;
+        });
 
       function confirmDeleteUser(userId) {
         if (window.confirm("Are you sure you want to delete this user?")) {
@@ -252,7 +262,9 @@
               showNotification("Error deleting user", false);
             }
           })
-          .catch(() => showNotification("An error occurred while deleting the user", false));
+          .catch(() =>
+            showNotification("An error occurred while deleting the user", false)
+          );
       }
     </script>
   </body>
