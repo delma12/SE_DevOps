@@ -62,12 +62,22 @@ jobs:
         run: pip install safety && scan
         continue-on-error: true #allowing this to continue as this informs dependency security issues but none of them can be fixed so its kept in for awareness
 
-  SAST_analysis:
+  codeql_analysis:
     needs: setup
     runs-on: ubuntu-latest
-    steps:    
-      - name: Run SAST Analysis (Semgrep)
-        run: pip install semgrep && semgrep scan --config=python
+    permissions:
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: python
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
 
   tests:
     needs: setup
