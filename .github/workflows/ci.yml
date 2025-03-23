@@ -99,7 +99,7 @@ jobs:
         run: pytest --disable-warnings
 
   deploy:
-    needs: [setup, linting, codeql_analysis, tests]  # Ensure all jobs must pass before deployment
+    needs: [setup, linting, Security_scan, codeql_analysis, tests]  # Ensure all jobs must pass before deployment
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
