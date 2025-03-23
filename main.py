@@ -276,8 +276,7 @@ async def get_users(
     is_admin(user)
     users = db.query(User).all()
     return templates.TemplateResponse(
-        "users.html", {"request": request,
-                       "users": users, "is_admin": user.is_admin}
+        "users.html", {"request": request, "users": users, "is_admin": user.is_admin}
     )
 
 
@@ -404,14 +403,12 @@ async def get_apprentice(
     db: Session = Depends(get_db),
     user: UserResponse = Depends(get_current_user),
 ):
-    apprentice = db.query(Apprentice).filter(
-        Apprentice.id == apprentice_id).first()
+    apprentice = db.query(Apprentice).filter(Apprentice.id == apprentice_id).first()
     if not apprentice:
         raise HTTPException(status_code=404, detail="Apprentice not found")
 
     creator_username = (
-        db.query(User.username).filter(
-            User.id == apprentice.creator_id).scalar()
+        db.query(User.username).filter(User.id == apprentice.creator_id).scalar()
         or "Deleted User"
     )
 
@@ -435,8 +432,7 @@ async def update_apprentice(
     current_user: UserResponse = Depends(get_current_user),
 ):
 
-    db_apprentice = db.query(Apprentice).filter(
-        Apprentice.id == apprentice_id).first()
+    db_apprentice = db.query(Apprentice).filter(Apprentice.id == apprentice_id).first()
 
     if not db_apprentice:
         raise HTTPException(status_code=404, detail="Apprentice not found")
@@ -460,8 +456,7 @@ async def update_apprentice(
     db.commit()
     db.refresh(db_apprentice)
 
-    creator = db.query(User).filter(
-        User.id == db_apprentice.creator_id).first()
+    creator = db.query(User).filter(User.id == db_apprentice.creator_id).first()
     creator_username = creator.username if creator else "Deleted User"
 
     return ApprenticeResponse(
@@ -484,13 +479,11 @@ async def delete_apprentice(
 ):
     is_admin(user)
 
-    db_apprentice = db.query(Apprentice).filter(
-        Apprentice.id == apprentice_id).first()
+    db_apprentice = db.query(Apprentice).filter(Apprentice.id == apprentice_id).first()
     if not db_apprentice:
         raise HTTPException(status_code=404, detail="Apprentice not found")
 
-    creator = db.query(User).filter(
-        User.id == db_apprentice.creator_id).first()
+    creator = db.query(User).filter(User.id == db_apprentice.creator_id).first()
 
     creator_username = creator.username if creator else "Deleted User"
 
@@ -556,8 +549,7 @@ async def create_review(
             content=content,
             apprentice_id=apprentice_id,
             user_id=current_user.id,
-            date_of_review=datetime.strptime(
-                date_of_review, "%Y-%m-%d").date(),
+            date_of_review=datetime.strptime(date_of_review, "%Y-%m-%d").date(),
             progress_review_form=document_path,
             completed=completed,
         )
@@ -633,8 +625,7 @@ async def update_review(
         # Update review fields
         review.apprentice_id = apprentice_id
         review.content = content
-        review.date_of_review = datetime.strptime(
-            date_of_review, "%Y-%m-%d").date()
+        review.date_of_review = datetime.strptime(date_of_review, "%Y-%m-%d").date()
         review.completed = completed
 
         db.commit()
