@@ -34,10 +34,9 @@ app = FastAPI()
 from jinja2 import Environment, select_autoescape, FileSystemLoader
 from fastapi.templating import Jinja2Templates
 
-# Using select_autoescape to enable autoescape for specific file types --> .html/.xml files 
+# Using select_autoescape to enable autoescape for specific file types --> .html/.xml files
 env = Environment(
-    loader=FileSystemLoader("templates"),
-    autoescape=select_autoescape(['html', 'xml']) 
+    loader=FileSystemLoader("templates"), autoescape=select_autoescape(["html", "xml"])
 )
 
 templates = Jinja2Templates(directory="templates")
@@ -49,7 +48,6 @@ app.mount("/static", StaticFiles(directory="./static"), name="static")
 load_dotenv()
 
 init_db()
-
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -201,25 +199,32 @@ login_attempts = defaultdict(list)
 MAX_ATTEMPTS = 3
 LOCKOUT_TIME = 300  # 5 minutes in seconds
 
+
 @app.post("/login", response_class=HTMLResponse)
 async def login_post(request: Request, db: Session = Depends(get_db)):
     form = await request.form()
     username = form.get("username")
     password = form.get("password")
-    
+
     # Check if user is currently locked out
     current_time = time()
     attempts = login_attempts[username]
 
     # Remove old attempts
-    attempts = [attempt for attempt in attempts if current_time - attempt < LOCKOUT_TIME]
+    attempts = [
+        attempt for attempt in attempts if current_time - attempt < LOCKOUT_TIME
+    ]
     login_attempts[username] = attempts
 
     # Check if too many attempts
     if len(attempts) >= MAX_ATTEMPTS:
         time_remaining = int(LOCKOUT_TIME - (current_time - attempts[0]))
-        error_message = f"Too many login attempts. Please try again in {time_remaining} seconds."
-        return templates.TemplateResponse("index.html", {"request": request, "error": error_message})
+        error_message = (
+            f"Too many login attempts. Please try again in {time_remaining} seconds."
+        )
+        return templates.TemplateResponse(
+            "index.html", {"request": request, "error": error_message}
+        )
 
     user = db.query(User).filter(User.username == username).first()
     if user and pwd_context.verify(password, user.hashed_password):
@@ -231,8 +236,9 @@ async def login_post(request: Request, db: Session = Depends(get_db)):
 
     # Failed login attempt
     login_attempts[username].append(current_time)
-    return templates.TemplateResponse("index.html", {"request": request, "error": "Invalid credentials"})
-
+    return templates.TemplateResponse(
+        "login.html", {"request": request, "error": "Invalid credentials"}
+    )
 
 
 @app.post("/register")
