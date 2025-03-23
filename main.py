@@ -2,6 +2,8 @@ import os
 import shutil
 from datetime import date, datetime
 from typing import Annotated, List, Optional
+from time import time
+from collections import defaultdict
 
 import uvicorn
 from dotenv import load_dotenv
@@ -17,7 +19,7 @@ from fastapi import (
     UploadFile,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from passlib.context import CryptContext
@@ -28,12 +30,26 @@ from database import SessionLocal, init_db
 from models import Apprentice, Review, User
 
 app = FastAPI()
+
+from jinja2 import Environment, select_autoescape, FileSystemLoader
+from fastapi.templating import Jinja2Templates
+
+# Using select_autoescape to enable autoescape for specific file types --> .html/.xml files 
+env = Environment(
+    loader=FileSystemLoader("templates"),
+    autoescape=select_autoescape(['html', 'xml']) 
+)
+
 templates = Jinja2Templates(directory="templates")
+templates.env = env
+
+
 app.mount("/static", StaticFiles(directory="./static"), name="static")
 
 load_dotenv()
 
 init_db()
+
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -181,17 +197,42 @@ async def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 
-@app.post("/login", response_class=RedirectResponse)
+login_attempts = defaultdict(list)
+MAX_ATTEMPTS = 3
+LOCKOUT_TIME = 300  # 5 minutes in seconds
+
+@app.post("/login", response_class=HTMLResponse)
 async def login_post(request: Request, db: Session = Depends(get_db)):
     form = await request.form()
     username = form.get("username")
     password = form.get("password")
+    
+    # Check if user is currently locked out
+    current_time = time()
+    attempts = login_attempts[username]
+
+    # Remove old attempts
+    attempts = [attempt for attempt in attempts if current_time - attempt < LOCKOUT_TIME]
+    login_attempts[username] = attempts
+
+    # Check if too many attempts
+    if len(attempts) >= MAX_ATTEMPTS:
+        time_remaining = int(LOCKOUT_TIME - (current_time - attempts[0]))
+        error_message = f"Too many login attempts. Please try again in {time_remaining} seconds."
+        return templates.TemplateResponse("index.html", {"request": request, "error": error_message})
+
     user = db.query(User).filter(User.username == username).first()
     if user and pwd_context.verify(password, user.hashed_password):
+        # Successful login - clear attempts
+        login_attempts[username] = []
         response = RedirectResponse(url="/dashboard", status_code=302)
         response.set_cookie(key="username", value=username)
         return response
-    raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    # Failed login attempt
+    login_attempts[username].append(current_time)
+    return templates.TemplateResponse("index.html", {"request": request, "error": "Invalid credentials"})
+
 
 
 @app.post("/register")

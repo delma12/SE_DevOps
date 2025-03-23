@@ -20,37 +20,43 @@
       .form-check-item {
         margin-bottom: 0.5rem;
       }
+      .alert {
+        margin-bottom: 20px;
+        transition: all 0.3s ease;
+      }
+      .alert-danger {
+        background-color: #f8d7da;
+        border-color: #f5c6cb;
+        color: #721c24;
+        padding: 12px;
+        border-radius: 4px;
+      }
     </style>
   </head>
   <body>
     <div class="form-container">
+      <!-- Error Alert Box -->
+      <div id="error-alert" class="alert alert-danger" style="display: none" role="alert">
+        <span id="error-message"></span>
+        <br />
+        <button onclick="hideErrorAlert()" class="btn btn-sm btn-secondary mt-2">
+          Back to Login
+        </button>
+      </div>
+
       <div id="login-form" class="form-group">
         <h2>Login</h2>
-        <form method="post" action="/login">
+        <form id="loginForm">
           <div class="mb-3">
             <label for="login-username" class="form-label">Username</label>
-            <input
-              type="text"
-              id="login-username"
-              name="username"
-              class="form-control"
-              required
-            />
+            <input type="text" id="login-username" name="username" class="form-control" required />
           </div>
           <div class="mb-3">
             <label for="login-password" class="form-label">Password</label>
-            <input
-              type="password"
-              id="login-password"
-              name="password"
-              class="form-control"
-              required
-            />
+            <input type="password" id="login-password" name="password" class="form-control" required />
           </div>
-          <button type="submit" class="btn btn-primary">Login</button>
-          <p class="form-toggle" onclick="toggleForm()">
-            Don't have an account? Register
-          </p>
+          <button type="submit" class="btn btn-primary" id="login-button">Login</button>
+          <p class="form-toggle" onclick="toggleForm()">Don't have an account? Register</p>
         </form>
       </div>
 
@@ -59,52 +65,23 @@
         <form method="post" action="/register" id="registrationForm">
           <div class="mb-3">
             <label for="register-username" class="form-label">Username</label>
-            <input
-              type="text"
-              id="register-username"
-              name="username"
-              class="form-control"
-              required
-            />
+            <input type="text" id="register-username" name="username" class="form-control" required />
           </div>
           <div class="mb-3">
             <label for="register-password" class="form-label">Password</label>
-            <input
-              type="password"
-              id="register-password"
-              name="password"
-              class="form-control"
-              required
-            />
+            <input type="password" id="register-password" name="password" class="form-control" required />
             <div id="passwordRequirements" class="form-text">
               <ul>
-                <li id="length" class="form-check-item">
-                  8 characters minimum
-                </li>
-                <li id="uppercase" class="form-check-item">
-                  At least one uppercase letter
-                </li>
-                <li id="lowercase" class="form-check-item">
-                  At least one lowercase letter
-                </li>
+                <li id="length" class="form-check-item">8 characters minimum</li>
+                <li id="uppercase" class="form-check-item">At least one uppercase letter</li>
+                <li id="lowercase" class="form-check-item">At least one lowercase letter</li>
                 <li id="number" class="form-check-item">At least one number</li>
-                <li id="special" class="form-check-item">
-                  At least one special character
-                </li>
+                <li id="special" class="form-check-item">At least one special character</li>
               </ul>
             </div>
           </div>
-          <button
-            type="submit"
-            class="btn btn-primary"
-            id="register-button"
-            disabled
-          >
-            Register
-          </button>
-          <p class="form-toggle" onclick="toggleForm()">
-            Already have an account? Login
-          </p>
+          <button type="submit" class="btn btn-primary" id="register-button" disabled>Register</button>
+          <p class="form-toggle" onclick="toggleForm()">Already have an account? Login</p>
         </form>
       </div>
     </div>
@@ -116,15 +93,70 @@
         window.toggleForm = function () {
           const loginForm = document.getElementById("login-form");
           const registerForm = document.getElementById("register-form");
-          if (loginForm.style.display === "none") {
-            loginForm.style.display = "block";
-            registerForm.style.display = "none";
-          } else {
-            loginForm.style.display = "none";
-            registerForm.style.display = "block";
-          }
+          loginForm.style.display = loginForm.style.display === "none" ? "block" : "none";
+          registerForm.style.display = registerForm.style.display === "none" ? "block" : "none";
         };
 
+        // Handle Login Form Submission
+        const loginForm = document.getElementById("loginForm");
+        const errorAlert = document.getElementById("error-alert");
+        const errorMessage = document.getElementById("error-message");
+        const loginButton = document.getElementById("login-button");
+
+        loginForm.addEventListener("submit", async function (e) {
+          e.preventDefault();
+
+          const formData = new FormData(loginForm);
+
+          try {
+            const response = await fetch("/login", {
+              method: "POST",
+              body: formData,
+            });
+
+            if (response.ok) {
+              window.location.href = "/dashboard";
+            } else {
+              const data = await response.json();
+              errorMessage.innerHTML = data.detail || "Invalid credentials. Please try again.";
+              errorAlert.style.display = "block";
+
+              // If error contains a countdown timer (rate limit)
+              const timeMatch = data.detail.match(/\d+/);
+              if (timeMatch) {
+                const waitTime = parseInt(timeMatch[0]);
+                startCountdown(waitTime);
+              }
+            }
+          } catch (error) {
+            errorMessage.innerHTML = "An error occurred. Please try again.";
+            errorAlert.style.display = "block";
+          }
+        });
+
+        // Hide error alert
+        window.hideErrorAlert = function () {
+          errorAlert.style.display = "none";
+        };
+
+        // Start countdown for rate-limited logins
+        function startCountdown(seconds) {
+          loginButton.disabled = true;
+
+          const countdownInterval = setInterval(() => {
+            if (seconds <= 0) {
+              clearInterval(countdownInterval);
+              loginButton.disabled = false;
+              errorAlert.style.display = "none";
+              return;
+            }
+
+            errorMessage.innerHTML = `Too many login attempts. Please try again in ${seconds} seconds.`;
+            seconds--;
+          }, 1000);
+        }
+
+        // Password validation
         const passwordInput = document.getElementById("register-password");
         const requirements = {
           length: document.getElementById("length"),
@@ -149,13 +181,7 @@
           requirements.number.style.color = numberValid ? "green" : "red";
           requirements.special.style.color = specialValid ? "green" : "red";
 
-          const allValid =
-            lengthValid &&
-            uppercaseValid &&
-            lowercaseValid &&
-            numberValid &&
-            specialValid;
-          registerButton.disabled = !allValid;
+          registerButton.disabled = !(lengthValid && uppercaseValid && lowercaseValid && numberValid && specialValid);
         });
       });
     </script>
