@@ -8,7 +8,15 @@ A system where regular users have access to apprentice page and logout ability. 
 Install: pip install -r requirements.txt
 Run: python main.py or uvicorn main:app --reload
 
-Tests can be run with python -m pytest 
+Aware its not good practice but admin credentials if needed:
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=StrongSecurePassword123!
+
+Regular user:
+username:MilesMorales
+password:Morales123*
+
+Tests can be run with python -m pytest or just pytest
 
 Dependencies:
 Fast API Modules:
